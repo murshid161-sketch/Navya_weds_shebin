@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard — Ashitha &amp; Ben</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --ink:#0d0f0e;--cream:#f4ecdd;--paper:#fbf6ec;
+    --gold:#c9a24a;--gold-soft:#d9b66a;--forest:#1e3a2b;
+    --muted:#8a8478;--danger:#b24a3e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:'Cormorant Garamond',serif;font-size:16px;line-height:1.5;min-height:100vh}
+
+  /* LOGIN */
+  #login{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px 24px;text-align:center;background:var(--ink);color:var(--cream);
+  }
+  #login.gone{display:none}
+  #login h1{font-family:'Playfair Display',serif;font-style:italic;font-size:34px;color:var(--cream);margin-bottom:8px}
+  #login .sub{font-family:'Cinzel',serif;letter-spacing:.3em;font-size:10px;color:var(--gold);margin-bottom:32px}
+  #login input{
+    width:100%;max-width:320px;padding:14px 18px;border:1px solid rgba(201,162,74,.4);
+    background:rgba(255,255,255,.05);color:var(--cream);border-radius:10px;
+    font-family:'Cormorant Garamond',serif;font-size:16px;outline:none;margin-bottom:14px;
+  }
+  #login input:focus{border-color:var(--gold)}
+  #login button{
+    width:100%;max-width:320px;padding:14px;background:var(--gold);color:var(--ink);border:none;border-radius:10px;
+    font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;cursor:pointer;font-weight:600;
+  }
+  #login button:hover{filter:brightness(1.05)}
+  #loginErr{color:#f38e83;font-size:14px;margin-top:10px;min-height:18px}
+
+  /* DASHBOARD */
+  #dash{display:none}
+  #dash.show{display:block}
+
+  .topbar{
+    background:var(--ink);color:var(--cream);padding:18px 20px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(201,162,74,.2);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .dot{width:10px;height:10px;background:var(--gold);border-radius:50%}
+  .brand-text{font-family:'Playfair Display',serif;font-style:italic;font-size:18px}
+  .brand-sub{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.3em;color:var(--gold);margin-top:2px}
+  .logout{
+    background:transparent;color:var(--cream);border:1px solid rgba(255,255,255,.2);
+    padding:8px 14px;border-radius:8px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;cursor:pointer;
+  }
+
+  /* STATS */
+  .stats{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
+    padding:20px 16px 10px;
+  }
+  .stat{
+    background:#fff;border:1px solid rgba(201,162,74,.2);border-radius:12px;padding:14px 16px;
+    box-shadow:0 6px 18px rgba(30,25,15,.05);
+  }
+  .stat-label{font-family:'Cinzel',serif;letter-spacing:.2em;font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+  .stat-value{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);font-weight:500;line-height:1}
+  .stat-value small{font-size:14px;color:var(--muted);margin-left:4px;font-family:'Cormorant Garamond',serif}
+
+  /* FILTERS */
+  .filters{
+    padding:12px 16px 6px;
+  }
+  .filter-label{
+    font-family:'Cinzel',serif;letter-spacing:.2em;font-size:10px;color:var(--forest);
+    text-transform:uppercase;margin-bottom:8px;font-weight:600;
+  }
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{
+    background:#fff;border:1px solid rgba(201,162,74,.3);color:var(--forest);
+    padding:8px 13px;border-radius:999px;font-family:'Cinzel',serif;font-size:10px;
+    letter-spacing:.15em;cursor:pointer;transition:all .2s;font-weight:600;
+  }
+  .chip.on{background:var(--forest);color:var(--cream);border-color:var(--forest)}
+  .chip-count{margin-left:5px;opacity:.7;font-size:9px}
+
+  .search-row{display:flex;gap:8px;margin-bottom:10px}
+  .search-row input, .search-row select{
+    padding:10px 12px;border:1px solid rgba(0,0,0,.12);border-radius:10px;background:#fff;
+    font-family:'Cormorant Garamond',serif;font-size:15px;color:var(--ink);outline:none;
+  }
+  .search-row input{flex:1;min-width:0}
+  .search-row select{font-size:13px}
+  .search-row input:focus,.search-row select:focus{border-color:var(--forest)}
+
+  /* LIST */
+  .list{padding:0 16px 80px}
+  .card{
+    background:#fff;border:1px solid rgba(201,162,74,.25);border-radius:14px;
+    padding:16px;margin-bottom:10px;box-shadow:0 6px 18px rgba(30,25,15,.04);
+  }
+  .card.not-attending{background:#fbf4f3;border-color:rgba(178,74,62,.25)}
+  .c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .c-name{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:var(--ink);line-height:1.2}
+  .c-badge{
+    font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;padding:4px 9px;
+    border-radius:999px;font-weight:600;white-space:nowrap;
+  }
+  .c-badge.yes{background:#e6f0ea;color:var(--forest)}
+  .c-badge.no{background:#fbe4e0;color:var(--danger)}
+
+  .c-meta{
+    display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);
+  }
+  .c-meta strong{color:var(--ink);font-weight:600;margin-left:4px}
+
+  .c-events{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+  .ev-tag{
+    background:#faf5e8;color:var(--forest);border:1px solid rgba(201,162,74,.25);
+    padding:4px 9px;border-radius:6px;font-size:11px;font-family:'Cinzel',serif;
+    letter-spacing:.1em;font-weight:600;
+  }
+
+  .c-row{font-size:14px;color:#55504a;padding:4px 0;border-top:1px dashed rgba(0,0,0,.08)}
+  .c-row:first-of-type{border-top:none;padding-top:0}
+  .c-row .lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:2px}
+  .c-row .val{color:var(--ink)}
+
+  .c-time{margin-top:8px;font-size:11px;color:var(--muted);font-style:italic}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty h3{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--ink);margin-bottom:6px}
+
+  /* EXPORT */
+  .export-bar{
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--ink);color:var(--cream);padding:12px 16px;
+    display:flex;gap:10px;justify-content:space-between;align-items:center;
+    border-top:1px solid rgba(201,162,74,.2);z-index:50;
+  }
+  .export-bar .count{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;color:var(--gold)}
+  .export-bar button{
+    background:var(--gold);color:var(--ink);border:none;padding:10px 18px;border-radius:8px;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:.25em;cursor:pointer;font-weight:600;
+  }
+
+  /* PERSONALISE LINK SECTION */
+  .personalise{
+    background:#fff;border:1px solid rgba(201,162,74,.25);border-radius:14px;
+    padding:16px;margin:10px 16px;box-shadow:0 6px 18px rgba(30,25,15,.04);
+  }
+  .personalise h3{font-family:'Playfair Display',serif;font-style:italic;font-size:18px;color:var(--ink);margin-bottom:4px}
+  .personalise p{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .personalise input{
+    width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;
+    font-family:'Cormorant Garamond',serif;font-size:15px;margin-bottom:8px;
+  }
+  .personalise .gen-link{
+    background:#faf5e8;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;
+    color:var(--forest);word-break:break-all;margin-bottom:8px;border:1px dashed rgba(201,162,74,.3);
+  }
+  .personalise .pa-btns{display:flex;gap:6px}
+  .personalise .pa-btns button{
+    flex:1;background:var(--forest);color:var(--cream);border:none;padding:10px;border-radius:8px;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;cursor:pointer;font-weight:600;
+  }
+  .personalise .pa-btns button.secondary{background:#25D366}
+
+  @media(min-width:640px){
+    .stats{grid-template-columns:repeat(4,1fr);padding:20px 24px 10px}
+    .filters,.list,.personalise{padding-left:24px;padding-right:24px}
+    .list{max-width:800px;margin:0 auto}
+    .personalise{max-width:800px;margin:10px auto}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>Ashitha &amp; Ben</h1>
+  <div class="sub">CLIENT DASHBOARD</div>
+  <input type="password" id="pw" placeholder="Enter password" autocomplete="current-password">
+  <button onclick="tryLogin()">UNLOCK</button>
+  <div id="loginErr"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <div class="brand-text">Ashitha &amp; Ben</div>
+        <div class="brand-sub">RSVP DASHBOARD</div>
+      </div>
+    </div>
+    <button class="logout" onclick="logout()">LOG OUT</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total RSVPs</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat"><div class="stat-label">Attending</div><div class="stat-value" id="statYes">0</div></div>
+    <div class="stat"><div class="stat-label">Not Attending</div><div class="stat-value" id="statNo">0</div></div>
+    <div class="stat"><div class="stat-label">Peak event attendance</div><div class="stat-value" id="statGuests">0</div></div>
+  </div>
+
+  <!-- PERSONALISED LINK GENERATOR -->
+  <div class="personalise">
+    <h3>Create personalised invitation</h3>
+    <p>Enter a guest's name to generate a link with their name pre-filled.</p>
+    <input type="text" id="pName" placeholder="e.g., John Mathew">
+    <div class="gen-link" id="pLink">https://digiwed.online/ashitha-ben.html?guest=...</div>
+    <div class="pa-btns">
+      <button onclick="copyLink()">COPY LINK</button>
+      <button class="secondary" onclick="sendWhatsApp()">SHARE ON WHATSAPP</button>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <div class="filter-label">Filter by event <span style="color:var(--muted);font-weight:400;font-size:9px;text-transform:none;letter-spacing:.1em;">(numbers = total guests expected)</span></div>
+    <div class="chips" id="eventChips">
+      <div class="chip on" data-ev="all">All<span class="chip-count" id="cnt-all">0</span></div>
+      <div class="chip" data-ev="Madhuramveppu">Madhuramveppu<span class="chip-count" id="cnt-Madhuramveppu">0</span></div>
+      <div class="chip" data-ev="Wedding Ceremony">Ceremony<span class="chip-count" id="cnt-Wedding Ceremony">0</span></div>
+      <div class="chip" data-ev="Reception">Reception<span class="chip-count" id="cnt-Reception">0</span></div>
+      <div class="chip" data-ev="Post-Wedding Reception">Post-Wedding<span class="chip-count" id="cnt-Post-Wedding Reception">0</span></div>
+    </div>
+
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="Search by name…" oninput="render()">
+      <select id="filterAttend" onchange="render()">
+        <option value="all">All replies</option>
+        <option value="yes">Attending</option>
+        <option value="no">Not attending</option>
+      </select>
+      <select id="filterMeal" onchange="render()">
+        <option value="all">All meals</option>
+        <option value="Vegetarian">Veg only</option>
+        <option value="Non-Vegetarian">Non-Veg only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="list" id="list"></div>
+
+  <!-- EXPORT BAR -->
+  <div class="export-bar">
+    <div class="count" id="exportCount">SHOWING 0 OF 0</div>
+    <button onclick="exportCSV()">↓ EXPORT CSV</button>
+  </div>
+</div>
+
+<script>
+  // ========== FIREBASE (guarded) ==========
+  let db = null;
+  const RSVP_PATH = 'ashitha-ben/rsvp';
+  try {
+    if(typeof firebase !== 'undefined'){
+      const firebaseConfig = {
+        apiKey: "AIzaSy841fvxVl1KeHOro6WKJ72o22izuCpJ-b4",
+        authDomain: "yaseen-jumana-wedding.firebaseapp.com",
+        databaseURL: "https://yaseen-jumana-wedding-default-rtdb.firebaseio.com",
+        projectId: "yaseen-jumana-wedding",
+        storageBucket: "yaseen-jumana-wedding.firebasestorage.app",
+        messagingSenderId: "355557621111",
+        appId: "1:355557621111:web:d0b78c34bfe5a53b69f572"
+      };
+      if(!firebase.apps.length){firebase.initializeApp(firebaseConfig);}
+      db = firebase.database();
+    }
+  } catch(e){ console.warn('Firebase init failed:', e); }
+
+  // ========== LOGIN ==========
+  const DASHBOARD_PASSWORD = 'ashithaben2026';  // CLIENT CAN CHANGE THIS
+
+  function tryLogin(){
+    const pw = document.getElementById('pw').value;
+    if(pw === DASHBOARD_PASSWORD){
+      sessionStorage.setItem('dash_auth','1');
+      showDash();
+    } else {
+      document.getElementById('loginErr').textContent = 'Wrong password';
+    }
+  }
+  document.getElementById('pw').addEventListener('keypress',e=>{if(e.key==='Enter')tryLogin();});
+
+  function showDash(){
+    document.getElementById('login').classList.add('gone');
+    document.getElementById('dash').classList.add('show');
+    loadData();
+  }
+  function logout(){
+    sessionStorage.removeItem('dash_auth');
+    location.reload();
+  }
+  if(sessionStorage.getItem('dash_auth') === '1') showDash();
+
+  // ========== DATA ==========
+  let allRsvps = [];
+  let activeEvent = 'all';
+
+  function loadData(){
+    if(!db){
+      document.getElementById('list').innerHTML = `<div class="empty"><h3>Firebase unavailable</h3><p>This preview environment blocks external scripts. On your live site (digiwed.online), RSVPs will load here automatically.</p></div>`;
+      return;
+    }
+    db.ref(RSVP_PATH).on('value', snap => {
+      allRsvps = [];
+      if(snap.exists()){
+        const data = snap.val();
+        Object.keys(data).forEach(k => {
+          allRsvps.push({id:k, ...data[k]});
+        });
+        // newest first
+        allRsvps.sort((a,b) => (b.ts||0) - (a.ts||0));
+      }
+      updateStats();
+      render();
+    });
+  }
+
+  function updateStats(){
+    const yes = allRsvps.filter(r => r.attending);
+    const no = allRsvps.filter(r => !r.attending);
+    // Total guests = sum of the MAX members across any event per guest household
+    // (use totalMembers from new schema if present, fallback to members for legacy records)
+    const events = ['Madhuramveppu','Wedding Ceremony','Reception','Post-Wedding Reception'];
+    // For "Total Guests" stat, show the largest event headcount (most guests coming to a single event)
+    let maxEventTotal = 0;
+    events.forEach(ev => {
+      const total = yes.reduce((s, r) => {
+        if(!r.events || !r.events.includes(ev)) return s;
+        // per-event count from new schema, fallback to members
+        const n = (r.eventsDetail && r.eventsDetail[ev]) || r.members || 1;
+        return s + n;
+      }, 0);
+      if(total > maxEventTotal) maxEventTotal = total;
+    });
+
+    document.getElementById('statTotal').innerHTML = allRsvps.length;
+    document.getElementById('statYes').innerHTML = yes.length;
+    document.getElementById('statNo').innerHTML = no.length;
+    document.getElementById('statGuests').innerHTML = maxEventTotal + ' <small>peak</small>';
+
+    // event counts = total heads per event
+    document.getElementById('cnt-all').textContent = allRsvps.length;
+    events.forEach(ev => {
+      const totalHeads = yes.reduce((s, r) => {
+        if(!r.events || !r.events.includes(ev)) return s;
+        const n = (r.eventsDetail && r.eventsDetail[ev]) || r.members || 1;
+        return s + n;
+      }, 0);
+      const el = document.getElementById('cnt-' + ev);
+      if(el) el.textContent = totalHeads;
+    });
+  }
+
+  // ========== FILTER CHIPS ==========
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+      activeEvent = c.dataset.ev;
+      render();
+    });
+  });
+
+  // ========== RENDER LIST ==========
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+  function render(){
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const fAttend = document.getElementById('filterAttend').value;
+    const fMeal = document.getElementById('filterMeal').value;
+
+    let filtered = allRsvps.slice();
+
+    if(activeEvent !== 'all'){
+      filtered = filtered.filter(r => r.attending && r.events && r.events.includes(activeEvent));
+    }
+    if(fAttend === 'yes') filtered = filtered.filter(r => r.attending);
+    if(fAttend === 'no') filtered = filtered.filter(r => !r.attending);
+    if(fMeal !== 'all') filtered = filtered.filter(r => r.meal === fMeal);
+    if(q) filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(q));
+
+    const list = document.getElementById('list');
+    if(filtered.length === 0){
+      list.innerHTML = `<div class="empty"><h3>No RSVPs yet</h3><p>Guests will appear here as they respond.</p></div>`;
+    } else {
+      list.innerHTML = filtered.map(r => renderCard(r)).join('');
+    }
+    document.getElementById('exportCount').textContent = `SHOWING ${filtered.length} OF ${allRsvps.length}`;
+    window._filtered = filtered;  // for CSV
+  }
+
+  function renderCard(r){
+    const attending = !!r.attending;
+    // Show events with per-event counts
+    const events = (r.events || []).map(e => {
+      const n = (r.eventsDetail && r.eventsDetail[e]) || r.members || 1;
+      return `<span class="ev-tag">${esc(e)} <span style="opacity:.6;font-weight:400;margin-left:4px;">× ${n}</span></span>`;
+    }).join('');
+    const diet = (r.diet || []).filter(d => d !== 'None').join(', ');
+
+    // Summary line: events attended + total head count
+    const evCount = (r.events || []).length;
+    const peakMembers = r.eventsDetail ? Math.max(...Object.values(r.eventsDetail), 0) : (r.members || 1);
+
+    return `<div class="card ${attending?'':'not-attending'}">
+      <div class="c-head">
+        <div class="c-name">${esc(r.name || 'Unknown')}</div>
+        <div class="c-badge ${attending?'yes':'no'}">${attending?'ATTENDING':'NOT ATTENDING'}</div>
+      </div>
+      ${attending ? `
+        <div class="c-meta">
+          <div>Events:<strong>${evCount}</strong></div>
+          <div>Max group:<strong>${peakMembers}</strong></div>
+          <div>Meal:<strong>${esc(r.meal || '—')}</strong></div>
+        </div>
+        ${events ? `<div class="c-events">${events}</div>` : ''}
+        ${r.namesList ? `<div class="c-row"><span class="lbl">Names</span><span class="val">${esc(r.namesList)}</span></div>` : ''}
+        ${diet ? `<div class="c-row"><span class="lbl">Dietary</span><span class="val">${esc(diet)}</span></div>` : ''}
+      ` : ''}
+      <div class="c-time">Replied ${esc(r.time || '')}</div>
+    </div>`;
+  }
+
+  // ========== PERSONALISED LINK ==========
+  // Change BASE_URL to your live URL once deployed
+  const BASE_URL = window.location.origin + window.location.pathname.replace(/dashboard\.html$/, 'ashitha-ben.html');
+  const pNameInput = document.getElementById('pName');
+  const pLinkEl = document.getElementById('pLink');
+
+  function updatePLink(){
+    const name = pNameInput.value.trim();
+    if(!name){ pLinkEl.textContent = BASE_URL; return; }
+    pLinkEl.textContent = BASE_URL + '?guest=' + encodeURIComponent(name);
+  }
+  pNameInput.addEventListener('input', updatePLink);
+  updatePLink();
+
+  function copyLink(){
+    const text = pLinkEl.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const old = btn.textContent;
+      btn.textContent = '✓ COPIED';
+      setTimeout(() => btn.textContent = old, 1500);
+    });
+  }
+
+  function sendWhatsApp(){
+    const name = pNameInput.value.trim();
+    if(!name){ alert('Please enter a name first'); return; }
+    const link = pLinkEl.textContent;
+    const msg = `Dear ${name},\n\nWith great joy, we invite you to celebrate our wedding.\n\n✨ Please view your personal invitation here:\n${link}\n\nWith love,\nAshitha & Ben`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  // ========== CSV EXPORT ==========
+  function exportCSV(){
+    const rows = window._filtered || [];
+    if(rows.length === 0){ alert('No records to export'); return; }
+    const header = ['Name','Attending','Madhuramveppu','Wedding Ceremony','Reception','Post-Wedding Reception','Meal','Dietary','Names List','Replied At'];
+    const csvRows = [header];
+    const evs = ['Madhuramveppu','Wedding Ceremony','Reception','Post-Wedding Reception'];
+    rows.forEach(r => {
+      const evCounts = evs.map(e => {
+        if(!r.events || !r.events.includes(e)) return '';
+        return (r.eventsDetail && r.eventsDetail[e]) || r.members || 1;
+      });
+      csvRows.push([
+        r.name || '',
+        r.attending ? 'Yes' : 'No',
+        ...evCounts,
+        r.meal || '',
+        (r.diet || []).join(' | '),
+        r.namesList || '',
+        r.time || ''
+      ]);
+    });
+    const csv = csvRows.map(row => row.map(c => {
+      const s = String(c || '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ashitha-ben-rsvps-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>
