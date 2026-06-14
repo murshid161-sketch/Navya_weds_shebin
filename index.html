@@ -651,7 +651,7 @@ a{color:inherit;text-decoration:none}
         </div>
 
         <!-- Events with per-event count -->
-        <div class="field">
+        <div class="field" id="eventsField">
           <label class="field-label"><span class="num">3</span>WHICH EVENTS WILL YOU ATTEND?</label>
           <p style="font-size:13.5px;color:var(--muted);margin-bottom:10px;font-style:italic">Tap an event, then set how many people (including yourself) will be joining.</p>
 
@@ -1281,7 +1281,17 @@ a{color:inherit;text-decoration:none}
     attending = val;
     document.getElementById('attendYes').classList.toggle('active', val);
     document.getElementById('attendNo').classList.toggle('active',!val);
-    document.getElementById('fullForm').style.display = val ? 'block' : 'none';
+    // Keep the form visible either way — guests who can't make it can still leave a wish.
+    document.getElementById('fullForm').style.display = 'block';
+    document.getElementById('eventsField').style.display = val ? 'block' : 'none';
+    if(!val){
+      // Auto-scroll to the wishes field so they can leave a blessing for the couple.
+      const msg = document.getElementById('guestMessage');
+      setTimeout(()=>{
+        msg.scrollIntoView({behavior:'smooth', block:'center'});
+        msg.focus({preventScroll:true});
+      }, 260);
+    }
   }
 
   function addToCal(title,start,end,loc){
