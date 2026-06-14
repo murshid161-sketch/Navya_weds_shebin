@@ -393,8 +393,8 @@
           <div>Max group:<strong>${peakMembers}</strong></div>
         </div>
         ${events ? `<div class="c-events">${events}</div>` : ''}
-        ${r.message ? `<div class="c-row"><span class="lbl">Message</span><span class="val">${esc(r.message)}</span></div>` : ''}
       ` : ''}
+      ${r.message ? `<div class="c-row"><span class="lbl">${attending?'Message':'Wish'}</span><span class="val">${esc(r.message)}</span></div>` : ''}
       <div class="c-time">Replied ${esc(r.time||'')}</div>
     </div>`;
   }
